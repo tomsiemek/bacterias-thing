@@ -1,0 +1,47 @@
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Bakterie i inne takie heh</title>
+    <meta name="description" content="Super simulation lmao">
+
+    <style>
+        body {
+            background-color: rgb(39, 39, 39);
+        }
+
+        div.absolute {
+            position: relative;
+            top: 290px;
+            left: 10px;
+        }
+
+        #game-div {
+            width: fit-content;
+            margin: 0 auto;
+        }
+
+        input[type=range] {
+            height: 26px;
+            width: 200px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- your content here... -->
+    <div class="wrapper">
+
+        <div id="game-div">
+            <div class="absolute"><input type="range" id="input-speed" name="input-speed" min="0" max="10" value="1">
+            </div>
+
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+
+</html>

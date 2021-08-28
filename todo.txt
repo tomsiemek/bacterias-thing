@@ -1,0 +1,6 @@
+Conceptual:
+- Make bacteria-eating predators
+- genetics
+
+Technical:
+- add more dynamic parameters
