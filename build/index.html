@@ -12,9 +12,9 @@
             background-color: rgb(39, 39, 39);
         }
 
-        div.absolute {
+        #input-range-wrapper {
             position: relative;
-            top: 290px;
+            top: 390px;
             left: 10px;
         }
 
@@ -25,7 +25,16 @@
 
         input[type=range] {
             height: 26px;
-            width: 200px;
+            width: 240px;
+        }
+
+        #popup {
+            background-color: white;
+            visibility: hidden;
+            width: fit-content;
+            left: 0;
+            bottom: 0;
+            max-width: 1000px;
         }
     </style>
 </head>
@@ -35,13 +44,14 @@
     <div class="wrapper">
 
         <div id="game-div">
-            <div class="absolute"><input type="range" id="input-speed" name="input-speed" min="0" max="10" value="1">
+            <div id="input-range-wrapper">
+                <input type="range" id="input-speed" name="input-speed" min="0" max="10" value="1">
             </div>
 
         </div>
     </div>
 
-    <script src="main.js"></script>
+    <script src="script.js"></script>
 </body>
 
 </html>

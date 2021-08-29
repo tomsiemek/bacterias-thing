@@ -1,6 +1,6 @@
 Conceptual:
-- Make bacteria-eating predators
 - genetics
 
 Technical:
+- make plants spawn by one not by individual reproduction
 - add more dynamic parameters
