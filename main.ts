@@ -1,8 +1,8 @@
 // constants
 const MAX_INIT_VOLUME = 70
-const REPRODUCTION_CD = 50000
+const REPRODUCTION_CD = 5000
 //const MIN_REPRO_CD = 10000
-const LVL0_REPLANT_CD = 1000
+const LVL0_REPLANT_CD = 100
 const VOLUME_TRANSFER_SPEED = 0.01
 const MAX_GAME_SPEED = 35
 const BACT_SPEED = 0.05
@@ -12,9 +12,11 @@ const MAX_VOLUME = 100
 const METABOLISM_SPEED = 0.001
 const VOLUME_ACTION_THRESHOLD = MAX_VOLUME / 2
 
+const EVOLUTION_AGE = 100_000
+
 const NEW_BACT_VOLUME_PERC = 0.5
 
-const BACTERIA_LEVELS = 3
+const BACTERIA_LEVELS = 5
 
 const BACT_COLORS = ["#00ff00", "#42b3f5", "#8742f5", "#b6f542", "#ff0000"]
 
@@ -91,7 +93,8 @@ enum State {
     search,
     eat,
     dead,
-    consumed
+    consumed,
+    evolving
 }
 
 interface Position {
@@ -107,7 +110,8 @@ interface Bacteria {
     timeSinceReproduction: number,
     speed: number,
     eating: Bacteria,
-    level: number
+    level: number,
+    age: number
 }
 
 
@@ -169,10 +173,11 @@ function generateBacteria(level: number): Bacteria {
         position: getRandomPosition(),
         volume: randBetween(0, MAX_INIT_VOLUME),
         destination: null,
-        timeSinceReproduction: REPRODUCTION_CD,
+        timeSinceReproduction: 0,
         speed: BACT_SPEED,
         eating: null,
-        level
+        level,
+        age: 0
     }
 }
 
@@ -213,6 +218,11 @@ function drawEmptyRect(x: number, y: number, w: number, h: number, frameColor: s
     ctx.strokeRect(x, y, w, h)
 }
 
+function drawFilledRect(x: number, y: number, w: number, h: number, fillColor: string = "white") {
+    ctx.fillStyle = fillColor
+    ctx.fillRect(x, y, w, h)
+}
+
 function drawBackground() {
     ctx.fillStyle = "black"
     ctx.fillRect(0, 0, canvas.width, canvas.height)
@@ -241,6 +251,18 @@ function doOneBacteriaTick(bact: Bacteria, delta: number) {
         bact.state = State.dead
         return
     }
+    bact.age += delta
+    if (bact.age > EVOLUTION_AGE && bact.level < BACTERIA_LEVELS - 1) {
+        bact.age = 0
+        bact.state = State.evolving
+        bact.level += 1
+        // die out of age
+        // if (bact.level == BACTERIA_LEVELS) {
+        //     bact.state = State.dead
+        // }
+        newBacterias[bact.level].push(bact)
+        return
+    }
     if (bact.level == 0) {
         if (bact.state != State.dead && bact.volume < MAX_INIT_VOLUME) {
             bact.volume += METABOLISM_SPEED * delta
@@ -250,6 +272,10 @@ function doOneBacteriaTick(bact: Bacteria, delta: number) {
     console.assert(bact.level > 0, { msg: "level 0 shoudlnt be here" })
     bact.volume -= delta * METABOLISM_SPEED
     switch (bact.state) {
+        case State.evolving: {
+            bact.state = State.idle
+            break;
+        }
         case State.idle: {
             if (bact.volume < VOLUME_ACTION_THRESHOLD) {
                 bact.state = State.search
@@ -257,7 +283,7 @@ function doOneBacteriaTick(bact: Bacteria, delta: number) {
             }
             else {
                 bact.timeSinceReproduction += delta
-                if (bact.timeSinceReproduction > REPRODUCTION_CD * bact.level) {
+                if (bact.timeSinceReproduction > REPRODUCTION_CD) {
                     bact.timeSinceReproduction = 0
                     if (bacterias[bact.level].length + newBacterias[bact.level].length < MAX_BACTS) {
                         const newBacteria = reproduce(bact)
@@ -368,7 +394,7 @@ function mainLoop(timestamp: number) {
 
     bacterias.forEach(arr => arr.forEach(b => doOneBacteriaTick(b, deltaWarped)))
     for (let i = 0; i < BACTERIA_LEVELS; i++) {
-        bacterias[i] = bacterias[i].filter(b => b.state != State.dead)
+        bacterias[i] = bacterias[i].filter(b => (b.state != State.dead && b.state != State.evolving))
         bacterias[i] = [...bacterias[i], ...newBacterias[i]]
         newBacterias[i] = []
     }
@@ -384,7 +410,8 @@ function mainLoop(timestamp: number) {
         const radius = actualRadius(bactToShow) + SELECT_RECT_PADDING
         drawEmptyRect(bactToShow.position.x - radius, bactToShow.position.y - radius, radius * 2, radius * 2)
     }
-
+    const tranparentWhite = "rgba(0, 0, 0, 0.7)"
+    drawFilledRect(0,0,300,40 + TEXT_PAD*(BACTERIA_LEVELS+2),tranparentWhite)
     const font = "35px serif"
     const textColor = "yellow"
     drawText(10, TEXT_Y_START, "fps: " + Math.floor(fps), font, textColor)

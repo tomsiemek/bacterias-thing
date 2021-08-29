@@ -46,9 +46,9 @@ function _toConsumableArray(arr) {
 }
 // constants
 var MAX_INIT_VOLUME = 70;
-var REPRODUCTION_CD = 50000;
+var REPRODUCTION_CD = 5000;
 //const MIN_REPRO_CD = 10000
-var LVL0_REPLANT_CD = 1000;
+var LVL0_REPLANT_CD = 100;
 var VOLUME_TRANSFER_SPEED = 0.01;
 var MAX_GAME_SPEED = 35;
 var BACT_SPEED = 0.05;
@@ -57,8 +57,9 @@ var BASE_RADIUS = 25;
 var MAX_VOLUME = 100;
 var METABOLISM_SPEED = 0.001;
 var VOLUME_ACTION_THRESHOLD = MAX_VOLUME / 2;
+var EVOLUTION_AGE = 100000;
 var NEW_BACT_VOLUME_PERC = 0.5;
-var BACTERIA_LEVELS = 3;
+var BACTERIA_LEVELS = 5;
 var BACT_COLORS = [
     "#00ff00",
     "#42b3f5",
@@ -130,6 +131,7 @@ State;
     State1[State1["eat"] = 2] = "eat";
     State1[State1["dead"] = 3] = "dead";
     State1[State1["consumed"] = 4] = "consumed";
+    State1[State1["evolving"] = 5] = "evolving";
 })(State || (State = {
 }));
 // variables
@@ -189,10 +191,11 @@ function generateBacteria(level) {
         position: getRandomPosition(),
         volume: randBetween(0, MAX_INIT_VOLUME),
         destination: null,
-        timeSinceReproduction: REPRODUCTION_CD,
+        timeSinceReproduction: 0,
         speed: BACT_SPEED,
         eating: null,
-        level: level
+        level: level,
+        age: 0
     };
 }
 function actualRadius(bact) {
@@ -244,6 +247,11 @@ function drawEmptyRect(x, y, w, h, param) {
     ctx.lineWidth = 3;
     ctx.strokeRect(x, y, w, h);
 }
+function drawFilledRect(x, y, w, h, param) {
+    var fillColor = param === void 0 ? "white" : param;
+    ctx.fillStyle = fillColor;
+    ctx.fillRect(x, y, w, h);
+}
 function drawBackground() {
     ctx.fillStyle = "black";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -270,6 +278,18 @@ function doOneBacteriaTick(bact, delta) {
         bact.state = State.dead;
         return;
     }
+    bact.age += delta;
+    if (bact.age > EVOLUTION_AGE && bact.level < BACTERIA_LEVELS - 1) {
+        bact.age = 0;
+        bact.state = State.evolving;
+        bact.level += 1;
+        // die out of age
+        // if (bact.level == BACTERIA_LEVELS) {
+        //     bact.state = State.dead
+        // }
+        newBacterias[bact.level].push(bact);
+        return;
+    }
     if (bact.level == 0) {
         if (bact.state != State.dead && bact.volume < MAX_INIT_VOLUME) {
             bact.volume += METABOLISM_SPEED * delta;
@@ -281,6 +301,11 @@ function doOneBacteriaTick(bact, delta) {
     });
     bact.volume -= delta * METABOLISM_SPEED;
     switch(bact.state){
+        case State.evolving:
+            {
+                bact.state = State.idle;
+                break;
+            }
         case State.idle:
             {
                 if (bact.volume < VOLUME_ACTION_THRESHOLD) {
@@ -288,7 +313,7 @@ function doOneBacteriaTick(bact, delta) {
                     bact.destination = getRandomPosition();
                 } else {
                     bact.timeSinceReproduction += delta;
-                    if (bact.timeSinceReproduction > REPRODUCTION_CD * bact.level) {
+                    if (bact.timeSinceReproduction > REPRODUCTION_CD) {
                         bact.timeSinceReproduction = 0;
                         if (bacterias[bact.level].length + newBacterias[bact.level].length < MAX_BACTS) {
                             var newBacteria = reproduce(bact);
@@ -420,7 +445,7 @@ function mainLoop(timestamp) {
     });
     for(var i = 0; i < BACTERIA_LEVELS; i++){
         bacterias[i] = bacterias[i].filter(function(b) {
-            return b.state != State.dead;
+            return b.state != State.dead && b.state != State.evolving;
         });
         bacterias[i] = _toConsumableArray(bacterias[i]).concat(_toConsumableArray(newBacterias[i]));
         newBacterias[i] = [];
@@ -432,6 +457,8 @@ function mainLoop(timestamp) {
         var radius = actualRadius(bactToShow) + SELECT_RECT_PADDING;
         drawEmptyRect(bactToShow.position.x - radius, bactToShow.position.y - radius, radius * 2, radius * 2);
     }
+    var tranparentWhite = "rgba(0, 0, 0, 0.7)";
+    drawFilledRect(0, 0, 300, 40 + TEXT_PAD * (BACTERIA_LEVELS + 2), tranparentWhite);
     var font = "35px serif";
     var textColor = "yellow";
     drawText(10, TEXT_Y_START, "fps: " + Math.floor(fps), font, textColor);
