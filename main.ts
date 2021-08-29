@@ -2,7 +2,7 @@
 const MAX_INIT_VOLUME = 70
 const REPRODUCTION_CD = 50000
 //const MIN_REPRO_CD = 10000
-const LVL0_REPLANT_CD  = 1000
+const LVL0_REPLANT_CD = 1000
 const VOLUME_TRANSFER_SPEED = 0.01
 const MAX_GAME_SPEED = 35
 const BACT_SPEED = 0.05
@@ -24,6 +24,8 @@ const CONTACT_DISTANCE = 18 // on big deltas it get buggy so it need big collisi
 
 const TEXT_PAD = 50
 const TEXT_Y_START = 40
+
+const SELECT_RECT_PADDING = 10
 // init canvas
 const gameDiv = document.getElementById("game-div")
 const canvas = document.createElement("canvas")
@@ -41,13 +43,14 @@ function onChange(event) {
 }
 
 function mouseMoveHandler(event) {
-    // popupActive = false
-    // hidePopup()
+    mousePos.x = event.offsetX
+    mousePos.y = event.offsetY
+
 }
 function mouseClickHandler(event) {
     mousePos.x = event.offsetX
     mousePos.y = event.offsetY
-    popupActive = true
+    newClick = true
     showPopup()
 }
 
@@ -59,17 +62,17 @@ function hidePopup() {
     popupDiv.style.visibility = "hidden"
 }
 
-function setPopup(text:string) {
+function setPopup(text: string) {
     popupDiv.textContent = text
 }
-document.addEventListener("keyup", e => { 
+document.addEventListener("keyup", e => {
     const keyName = e.key
     if (keyName == " ") {
         console.log("pauza")
         pause = !pause
     }
 })
-  
+
 canvas.addEventListener("mousemove", mouseMoveHandler)
 canvas.addEventListener("mouseup", mouseClickHandler)
 popupDiv.onclick = hidePopup
@@ -115,9 +118,10 @@ let bacterias: Bacteria[][]
 let newBacterias: Bacteria[][]
 let lastLvl0RespawnTime: number
 //let mouseMoved: boolean
-let popupActive:boolean
+let newClick: boolean
 let mousePos: Position
-let pause:boolean
+let pause: boolean
+let bactToShow: Bacteria
 // functions
 
 function reset() {
@@ -126,13 +130,14 @@ function reset() {
     bacterias = []
     newBacterias = []
     mousePos = { x: 0, y: 0 }
-    popupActive = false
+    newClick = false
     pause = false
     lastLvl0RespawnTime = 0
+    bactToShow = null
     //mouseMoved = false
     for (let level = 0; level < BACTERIA_LEVELS; level++) {
         const arr = []
-        for (let i = 0; i < BACTERIA_INITIAL_N / (level+1); i++) {
+        for (let i = 0; i < BACTERIA_INITIAL_N / (level + 1); i++) {
             arr.push(generateBacteria(level))
         }
         bacterias[level] = arr
@@ -202,11 +207,10 @@ function drawCircle(x: number, y: number, radius: number, color: string) {
     ctx.fill()
 }
 
-function drawRect(x: number, y: number, w: number, h: number, fillColor: string, frameColor: "white") {
+function drawEmptyRect(x: number, y: number, w: number, h: number, frameColor: string = "white") {
     ctx.strokeStyle = frameColor
+    ctx.lineWidth = 3
     ctx.strokeRect(x, y, w, h)
-    ctx.fillStyle = fillColor
-    ctx.fillRect(x, y, w, h)
 }
 
 function drawBackground() {
@@ -222,6 +226,13 @@ function drawText(x: number, y: number, text: string, font: string, color: strin
     ctx.fillText(text, x, y)
 }
 
+function reproduce(mother: Bacteria): Bacteria {
+    const newBacteria = generateBacteria(mother.level)
+    newBacteria.position = { ...mother.position }
+    newBacteria.volume = mother.volume * NEW_BACT_VOLUME_PERC
+    return newBacteria
+}
+
 function doOneBacteriaTick(bact: Bacteria, delta: number) {
     if (delta == 0 || pause) {
         return
@@ -234,13 +245,6 @@ function doOneBacteriaTick(bact: Bacteria, delta: number) {
         if (bact.state != State.dead && bact.volume < MAX_INIT_VOLUME) {
             bact.volume += METABOLISM_SPEED * delta
         }
-        // if (bacterias[0].length + newBacterias[0].length < MAX_BACTS) {
-        //     bact.timeSinceReproduction += delta
-        //     if (bact.timeSinceReproduction > REPRODUCTION_CD) {
-        //         newBacterias[0].push(generateBacteria(0))
-        //         bact.timeSinceReproduction = 0
-        //     }
-        // }
         return
     }
     console.assert(bact.level > 0, { msg: "level 0 shoudlnt be here" })
@@ -256,11 +260,8 @@ function doOneBacteriaTick(bact: Bacteria, delta: number) {
                 if (bact.timeSinceReproduction > REPRODUCTION_CD * bact.level) {
                     bact.timeSinceReproduction = 0
                     if (bacterias[bact.level].length + newBacterias[bact.level].length < MAX_BACTS) {
-                        const newBacteria = generateBacteria(bact.level)
-                        newBacteria.position =  {...bact.position}
-                        const newBactVol = bact.volume * NEW_BACT_VOLUME_PERC
-                        newBacteria.volume = newBactVol
-                        bact.volume -= newBactVol
+                        const newBacteria = reproduce(bact)
+                        bact.volume -= newBacteria.volume
                         newBacterias[bact.level].push(newBacteria)
                     }
 
@@ -304,7 +305,7 @@ function doOneBacteriaTick(bact: Bacteria, delta: number) {
             }
             break;
         }
-        default:{
+        default: {
             break;
         }
     }
@@ -312,7 +313,7 @@ function doOneBacteriaTick(bact: Bacteria, delta: number) {
 
 
 
-function showMouseIntersectedBact():Bacteria {
+function showMouseIntersectedBact(): Bacteria {
     for (let i = 0; i < BACTERIA_LEVELS; i++) {
         const arr = bacterias[i]
         for (const bact of arr) {
@@ -320,7 +321,7 @@ function showMouseIntersectedBact():Bacteria {
                 console.log(bact)
                 return bact
             }
-        }       
+        }
     }
     return null
 }
@@ -335,15 +336,22 @@ function stringifyBacteria(bact: Bacteria) {
         return undefined
     })
 }
-function mainLoop(timestamp) {
-    if (popupActive) {
-        const bactToShow = showMouseIntersectedBact()
-        let text = ""
-        if(bactToShow) {
-            text = stringifyBacteria(bactToShow)
-        }         
-        setPopup(text)
+function mainLoop(timestamp: number) {
+    if (newClick) {
+        bactToShow = showMouseIntersectedBact()
+        newClick = false
     }
+    else if (bactToShow) {
+        if (bactToShow.state == State.dead) {
+            bactToShow = null
+            newClick = false
+        }
+    }
+    let text = ""
+    if (bactToShow) {
+        text = stringifyBacteria(bactToShow)
+    }
+    setPopup(text)
     const delta = timestamp - lastRenderTime
     lastRenderTime = timestamp
     let deltaWarped = delta * gameSpeed
@@ -357,7 +365,7 @@ function mainLoop(timestamp) {
             lastLvl0RespawnTime = 0
         }
     }
-    
+
     bacterias.forEach(arr => arr.forEach(b => doOneBacteriaTick(b, deltaWarped)))
     for (let i = 0; i < BACTERIA_LEVELS; i++) {
         bacterias[i] = bacterias[i].filter(b => b.state != State.dead)
@@ -372,6 +380,11 @@ function mainLoop(timestamp) {
     for (let i = 0; i < BACTERIA_LEVELS; i++) {
         bacterias[i].forEach(b => drawCircle(b.position.x, b.position.y, actualRadius(b), BACT_COLORS[i]))
     }
+    if (bactToShow) {
+        const radius = actualRadius(bactToShow) + SELECT_RECT_PADDING
+        drawEmptyRect(bactToShow.position.x - radius, bactToShow.position.y - radius, radius * 2, radius * 2)
+    }
+
     const font = "35px serif"
     const textColor = "yellow"
     drawText(10, TEXT_Y_START, "fps: " + Math.floor(fps), font, textColor)

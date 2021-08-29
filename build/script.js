@@ -58,7 +58,7 @@ var MAX_VOLUME = 100;
 var METABOLISM_SPEED = 0.001;
 var VOLUME_ACTION_THRESHOLD = MAX_VOLUME / 2;
 var NEW_BACT_VOLUME_PERC = 0.5;
-var BACTERIA_LEVELS = 4;
+var BACTERIA_LEVELS = 3;
 var BACT_COLORS = [
     "#00ff00",
     "#42b3f5",
@@ -72,6 +72,7 @@ var CONTACT_DISTANCE = 18 // on big deltas it get buggy so it need big collision
 ;
 var TEXT_PAD = 50;
 var TEXT_Y_START = 40;
+var SELECT_RECT_PADDING = 10;
 // init canvas
 var gameDiv = document.getElementById("game-div");
 var canvas = document.createElement("canvas");
@@ -88,13 +89,13 @@ function onChange(event) {
     gameSpeed = val;
 }
 function mouseMoveHandler(event) {
-// popupActive = false
-// hidePopup()
+    mousePos.x = event.offsetX;
+    mousePos.y = event.offsetY;
 }
 function mouseClickHandler(event) {
     mousePos.x = event.offsetX;
     mousePos.y = event.offsetY;
-    popupActive = true;
+    newClick = true;
     showPopup();
 }
 function showPopup() {
@@ -138,9 +139,10 @@ var bacterias;
 var newBacterias;
 var lastLvl0RespawnTime;
 //let mouseMoved: boolean
-var popupActive;
+var newClick;
 var mousePos;
 var pause;
+var bactToShow;
 // functions
 function reset() {
     gameSpeed = 1;
@@ -151,9 +153,10 @@ function reset() {
         x: 0,
         y: 0
     };
-    popupActive = false;
+    newClick = false;
     pause = false;
     lastLvl0RespawnTime = 0;
+    bactToShow = null;
     //mouseMoved = false
     for(var level = 0; level < BACTERIA_LEVELS; level++){
         var arr = [];
@@ -235,11 +238,11 @@ function drawCircle(x, y, radius, color) {
     ctx.arc(x, y, Math.max(0, radius), 0, Math.PI * 2, false);
     ctx.fill();
 }
-function drawRect(x, y, w, h, fillColor, frameColor) {
+function drawEmptyRect(x, y, w, h, param) {
+    var frameColor = param === void 0 ? "white" : param;
     ctx.strokeStyle = frameColor;
+    ctx.lineWidth = 3;
     ctx.strokeRect(x, y, w, h);
-    ctx.fillStyle = fillColor;
-    ctx.fillRect(x, y, w, h);
 }
 function drawBackground() {
     ctx.fillStyle = "black";
@@ -251,6 +254,13 @@ function drawText(x, y, text, font, color) {
         ctx.font = font;
     }
     ctx.fillText(text, x, y);
+}
+function reproduce(mother) {
+    var newBacteria = generateBacteria(mother.level);
+    newBacteria.position = _objectSpread({
+    }, mother.position);
+    newBacteria.volume = mother.volume * NEW_BACT_VOLUME_PERC;
+    return newBacteria;
 }
 function doOneBacteriaTick(bact, delta) {
     if (delta == 0 || pause) {
@@ -264,13 +274,6 @@ function doOneBacteriaTick(bact, delta) {
         if (bact.state != State.dead && bact.volume < MAX_INIT_VOLUME) {
             bact.volume += METABOLISM_SPEED * delta;
         }
-        // if (bacterias[0].length + newBacterias[0].length < MAX_BACTS) {
-        //     bact.timeSinceReproduction += delta
-        //     if (bact.timeSinceReproduction > REPRODUCTION_CD) {
-        //         newBacterias[0].push(generateBacteria(0))
-        //         bact.timeSinceReproduction = 0
-        //     }
-        // }
         return;
     }
     console.assert(bact.level > 0, {
@@ -288,12 +291,8 @@ function doOneBacteriaTick(bact, delta) {
                     if (bact.timeSinceReproduction > REPRODUCTION_CD * bact.level) {
                         bact.timeSinceReproduction = 0;
                         if (bacterias[bact.level].length + newBacterias[bact.level].length < MAX_BACTS) {
-                            var newBacteria = generateBacteria(bact.level);
-                            newBacteria.position = _objectSpread({
-                            }, bact.position);
-                            var newBactVol = bact.volume * NEW_BACT_VOLUME_PERC;
-                            newBacteria.volume = newBactVol;
-                            bact.volume -= newBactVol;
+                            var newBacteria = reproduce(bact);
+                            bact.volume -= newBacteria.volume;
                             newBacterias[bact.level].push(newBacteria);
                         }
                     }
@@ -387,14 +386,20 @@ function mainLoop(timestamp) {
             return drawCircle(b.position.x, b.position.y, actualRadius(b), BACT_COLORS[i1]);
         });
     };
-    if (popupActive) {
-        var bactToShow = showMouseIntersectedBact();
-        var text = "";
-        if (bactToShow) {
-            text = stringifyBacteria(bactToShow);
+    if (newClick) {
+        bactToShow = showMouseIntersectedBact();
+        newClick = false;
+    } else if (bactToShow) {
+        if (bactToShow.state == State.dead) {
+            bactToShow = null;
+            newClick = false;
         }
-        setPopup(text);
     }
+    var text = "";
+    if (bactToShow) {
+        text = stringifyBacteria(bactToShow);
+    }
+    setPopup(text);
     var delta = timestamp - lastRenderTime;
     lastRenderTime = timestamp;
     var deltaWarped = delta * gameSpeed;
@@ -423,6 +428,10 @@ function mainLoop(timestamp) {
     var fps = 1000 / delta;
     drawBackground();
     for(var i1 = 0; i1 < BACTERIA_LEVELS; i1++)_loop(i1);
+    if (bactToShow) {
+        var radius = actualRadius(bactToShow) + SELECT_RECT_PADDING;
+        drawEmptyRect(bactToShow.position.x - radius, bactToShow.position.y - radius, radius * 2, radius * 2);
+    }
     var font = "35px serif";
     var textColor = "yellow";
     drawText(10, TEXT_Y_START, "fps: " + Math.floor(fps), font, textColor);
