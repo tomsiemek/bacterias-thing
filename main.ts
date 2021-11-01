@@ -5,14 +5,13 @@ const REPRODUCTION_CD = 5000
 const LVL0_REPLANT_CD = 100
 const VOLUME_TRANSFER_SPEED = 0.01
 const MAX_GAME_SPEED = 35
-const BACT_SPEED = 0.05
-const MAX_SPEED = 0.05
-const BASE_RADIUS = 25
+const BACT_SPEED = 0.4
+const BASE_RADIUS = 18
 const MAX_VOLUME = 100
 const METABOLISM_SPEED = 0.001
 const VOLUME_ACTION_THRESHOLD = MAX_VOLUME / 2
 
-const EVOLUTION_AGE = 100_000
+const EVOLUTION_AGE = 30_000//100_000
 
 const NEW_BACT_VOLUME_PERC = 0.5
 
@@ -20,8 +19,8 @@ const BACTERIA_LEVELS = 5
 
 const BACT_COLORS = ["#00ff00", "#42b3f5", "#8742f5", "#b6f542", "#ff0000"]
 
-const BACTERIA_INITIAL_N = 50
-const MAX_BACTS = 500
+const BACTERIA_INITIAL_N = 1800
+const MAX_BACTS = 2500
 const CONTACT_DISTANCE = 18 // on big deltas it get buggy so it need big collision box - it flies throught the poing
 
 const TEXT_PAD = 50

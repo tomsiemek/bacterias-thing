@@ -51,13 +51,13 @@ var REPRODUCTION_CD = 5000;
 var LVL0_REPLANT_CD = 100;
 var VOLUME_TRANSFER_SPEED = 0.01;
 var MAX_GAME_SPEED = 35;
-var BACT_SPEED = 0.05;
-var MAX_SPEED = 0.05;
-var BASE_RADIUS = 25;
+var BACT_SPEED = 0.4;
+var BASE_RADIUS = 18;
 var MAX_VOLUME = 100;
 var METABOLISM_SPEED = 0.001;
 var VOLUME_ACTION_THRESHOLD = MAX_VOLUME / 2;
-var EVOLUTION_AGE = 100000;
+var EVOLUTION_AGE = 30000 //100_000
+;
 var NEW_BACT_VOLUME_PERC = 0.5;
 var BACTERIA_LEVELS = 5;
 var BACT_COLORS = [
@@ -67,8 +67,8 @@ var BACT_COLORS = [
     "#b6f542",
     "#ff0000"
 ];
-var BACTERIA_INITIAL_N = 50;
-var MAX_BACTS = 500;
+var BACTERIA_INITIAL_N = 1800;
+var MAX_BACTS = 2500;
 var CONTACT_DISTANCE = 18 // on big deltas it get buggy so it need big collision box - it flies throught the poing
 ;
 var TEXT_PAD = 50;
